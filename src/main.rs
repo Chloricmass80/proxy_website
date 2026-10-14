@@ -1,6 +1,6 @@
 use std::{process::exit, env};
 
-use sqlx::{Pool, Sqlite};
+use sqlx::{Sqlite};
 use tokio::net;
 use axum::{Router, extract::{State}, response::Redirect, routing::get};
 
@@ -25,12 +25,12 @@ impl Config {
             Ok(_) => {},
             Err(e) => {
                 if *&e.not_found() {
-                    println!("Could not find .env file.
+                    eprintln!("Could not find .env file.
 If executing the binary create a .env file by name '.env' or 'local.env' inside the binary's executable and fill out the variables.
 If executing the crate with cargo create a .env file by name 'local.env' inside the config/ directory.
 Falling back to defaults.");
                 } else {
-                    println!(".env file likely exists but could not be opened: {e}.
+                    eprintln!(".env file likely exists but could not be opened: {e}.
 Falling back to defaults.");
                 }
             }
@@ -59,14 +59,14 @@ To set a bool environment variable to true, add its decleration to equal any val
                         exit(0);
                     },
                     Err(e) => {
-                        println!("Unable to read number of hits: {e}");
+                        eprintln!("Unable to read number of hits: {e}");
                         exit(1)
                     }
                 }
             }
 
             println!("Argument '{}' not recognized. Use '--help' to see available commands.", args[1]);
-            exit(1);
+            exit(0);
         }
 
 
@@ -110,10 +110,13 @@ async fn handle_connect(State(state): State<AppState>) -> Redirect {
 }
 
 async fn create_app(config: Config) -> Router {
-    let pool: Pool<Sqlite> = initalize_db().await.map_or_else(|e| {
-        println!("Issue initalizing database: {e}");
-        exit(1);
-    }, |p| p);
+    let pool = match initalize_db().await{
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("Issue initalizing database: {e}");
+            exit(1);
+        }
+    };
 
     let state = AppState {
         pool,
@@ -132,20 +135,20 @@ async fn main() {
     let listener = match net::TcpListener::bind(&config.bind_addr).await {
         Ok(v) => v,
         Err(e) => {
-            println!("Could not start on port: {e}");
+            eprintln!("Could not start on port: {e}");
             exit(1);
         }
     };
 
     let app = create_app(config).await;
 
-    println!("Server running on http://localhost:3000");
+    match listener.local_addr() {
+        Ok(addr) => {println!("Server running on http://localhost:{}", addr.port());},
+        Err(e) => {println!("Server running. (Could not generate http socket address: {e})");}
+    }
 
-    match axum::serve(listener, app).await {
-        Ok(_) => {},
-        Err(e) => {
-            println!("Could not serve: {e}");
-            exit(1)
-        }
+    if let Err(e) = axum::serve(listener, app).await {
+        eprintln!("Could not serve: {e}");
+        exit(1)
     }
 }

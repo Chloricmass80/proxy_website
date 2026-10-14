@@ -3,17 +3,22 @@ use std::{env, fs, process::exit};
 use sqlx::{SqlitePool, Pool, Sqlite};
 
 pub async fn increment_hit_count(pool: &Pool<Sqlite>) {
-    let _ = sqlx::query("UPDATE site_stats SET hits = hits + 1 WHERE id = 1")
+    if let Err(e) = sqlx::query("UPDATE site_stats SET hits = hits + 1 WHERE id = 1")
         .execute(pool)
-        .await
-        .expect("Unable to increment database hit count.");
+        .await{
+            eprintln!("Unable to increment database hitcount: {e}")
+        };
 
-    if let Ok(record) = sqlx::query_as::<_, (i64,)>("SELECT hits FROM site_stats WHERE id = 1")
+    match sqlx::query_as::<_, (i64,)>("SELECT hits FROM site_stats WHERE id = 1")
         .fetch_one(pool)
-        .await 
-    {
-        println!("Persistent Hit Count: {}", record.0);
-    }
+        .await {
+        Ok(record) => {
+            println!("Persistent Hit Count: {}", record.0);
+        },
+        Err(e) => {
+            eprintln!("Unable to fetch Hit Count: {e}");
+        }
+    };
 }
 
 fn create_db_file() -> Result<(), Box<dyn std::error::Error>> {
@@ -26,8 +31,7 @@ fn create_db_file() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 pub async fn initalize_db() -> Result<Pool<Sqlite>, Box<dyn std::error::Error>> {
-    create_db_file()
-    .expect("Unable to create visitors.db file.");
+    create_db_file()?;
 
     let pool = SqlitePool::connect("sqlite:visitors.db").await?;
 
@@ -66,7 +70,7 @@ pub fn load_env_variables() -> Result<(), dotenvy::Error> {
         Err(e) => {
             if e.not_found() {
                 let mut env_path = env::current_exe().map_or_else(|e| {
-                    println!("!FATAL! Could not find current executable's file path: {e}");
+                    eprintln!("!FATAL! Could not find current executable's file path: {e}");
                     exit(1);
                 }, |v| v);
                 env_path.pop();
