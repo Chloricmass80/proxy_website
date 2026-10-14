@@ -17,6 +17,7 @@ struct AppState {
 struct Config {
     redirect_uri: String,
     track_hits: bool,
+    bind_addr: String,
 }
 
 impl Config {
@@ -73,10 +74,21 @@ Error: {e}");
         };
 
         let track_hits : bool = env::var("TRACK_HITS").is_ok();
+        
+        let bind_addr : String = match env::var("BIND_ADDR") {
+            Ok(v) => v,
+            Err(e) => {
+                println!("Warning!! No 'BINDADDR' Environment Variable found. Defaulting to a placeholder: 'https://en.wikipedia.org/wiki/Leonhard_Euler'.\n
+run -- h to see more information on how to set an environment variable.\n
+Error: {e}");
+                "0.0.0.0:3000".to_string()
+                }
+            };
 
         Config{
             redirect_uri,
             track_hits,
+            bind_addr,
         }
     }
 }
@@ -109,15 +121,16 @@ async fn create_app(config: Config) -> Router {
 async fn main() {
     let args = env::args().collect();
     let config = Config::new(args).await;
-    let app = create_app(config).await;
 
-    let listener = match net::TcpListener::bind("0.0.0.0:3000").await {
+    let listener = match net::TcpListener::bind(&config.bind_addr).await {
         Ok(v) => v,
         Err(e) => {
             println!("Could not start on port: {e}");
             exit(1);
         }
     };
+
+    let app = create_app(config).await;
 
     println!("Server running on http://localhost:3000");
 
