@@ -38,8 +38,8 @@ To read hits, add an argument '-r' or '--hits'. To instead see the number of hit
 Environment Variable setup:\n
 Find environment variables in local.env.\n
 To see what environment variables exist, visit example.env.\n
-To set a bool environment variable to false, simply remove it's decleration.\n
-To set a bool environment variable to true, add it's decleration to equal any value.");
+To set a bool environment variable to false, simply remove its decleration.\n
+To set a bool environment variable to true, add its decleration to equal any value.");
                 exit(0)
             }
 
