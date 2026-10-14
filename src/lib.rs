@@ -1,4 +1,4 @@
-use std::{fs};
+use std::{env, fs, process::exit};
 
 use sqlx::{SqlitePool, Pool, Sqlite};
 
@@ -58,4 +58,34 @@ pub async fn read_hits() -> Result<i64, Box<dyn std::error::Error>> {
         .await?;
 
     Ok(record.0)
+}
+
+pub fn load_env_variables() -> Result<(), dotenvy::Error> {
+    match dotenvy::from_filename("config/local.env") {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            if e.not_found() {
+                let mut env_path = env::current_exe().map_or_else(|e| {
+                    println!("!FATAL! Could not find current executable's file path: {e}");
+                    exit(1);
+                }, |v| v);
+                env_path.pop();
+                env_path.push(".env");
+
+                // try finding by ../.env
+                if fs::exists(&env_path).is_ok_and(|x| x) {
+                    dotenvy::from_filename(env_path)?;
+                // try finding by ../local.env
+                } else {
+                    env_path.pop();
+                    env_path.push("local.env");
+                    dotenvy::from_filename(env_path)?;
+                }
+
+                Ok(())
+            } else {
+                Err(e)
+            }
+        }
+    }
 }

@@ -3,7 +3,6 @@ use std::{process::exit, env};
 use sqlx::{Pool, Sqlite};
 use tokio::net;
 use axum::{Router, extract::{State}, response::Redirect, routing::get};
-use dotenvy;
 
 use proxy_website::{self, initalize_db};
 
@@ -22,24 +21,32 @@ struct Config {
 
 impl Config {
     async fn new(args: Vec<String>) -> Self {
-        dotenvy::from_filename("config/local.env").map_err(|e| {
-            println!("Unable to load environment variables from config/local.env.\n
-Please make sure it exists.\n
-Error: {e}");
-            exit(1);
-        });
+        match proxy_website::load_env_variables(){
+            Ok(_) => {},
+            Err(e) => {
+                if *&e.not_found() {
+                    println!("Could not find .env file.
+If executing the binary create a .env file by name '.env' or 'local.env' inside the binary's executable and fill out the variables.
+If executing the crate with cargo create a .env file by name 'local.env' inside the config/ directory.
+Falling back to defaults.");
+                } else {
+                    println!(".env file likely exists but could not be opened: {e}.
+Falling back to defaults.");
+                }
+            }
+        }
 
         if args.get(1).is_some() {
             let help = args[1].to_lowercase() == "-h".to_string() || args[1].to_lowercase() == "--help".to_string();
             if help {
-                println!("proxy_website help:\n
+                println!("proxy_website help:
 This binary is meant to run on a server as a backend.
-It tracks the number of hits it gets, then immediately redirects\n\n
-To read hits, add an argument '-r' or '--hits'. To instead see the number of hits. This will not run the server.\n
-Environment Variable setup:\n
-Find environment variables in local.env.\n
-To see what environment variables exist, visit example.env.\n
-To set a bool environment variable to false, simply remove its decleration.\n
+It tracks the number of hits it gets, then immediately redirects\n
+To read hits, add an argument '-r' or '--hits'. This will not run the server.
+Environment Variable setup:
+Find environment variables in 'local.env' or '.env'.
+To see what environment variables exist, visit example.env.
+To set a bool environment variable to false, simply remove its decleration.
 To set a bool environment variable to true, add its decleration to equal any value.");
                 exit(0)
             }
@@ -66,8 +73,8 @@ To set a bool environment variable to true, add its decleration to equal any val
         let redirect_uri = match env::var("REDIRECT_URI") {
             Ok(v) => v,
             Err(e) => {
-                println!("Warning!! No 'REDIRECT_URI' Environment Variable found. Defaulting to a placeholder: 'https://en.wikipedia.org/wiki/Leonhard_Euler'.\n
-run -- h to see more information on how to set an environment variable.\n
+                println!("Warning!! No 'REDIRECT_URI' Environment Variable found. Defaulting to a placeholder: 'https://en.wikipedia.org/wiki/Leonhard_Euler'.
+run -- h to see more information on how to set an environment variable.
 Error: {e}");
                 "https://en.wikipedia.org/wiki/Leonhard_Euler".to_string()
             }
@@ -78,8 +85,8 @@ Error: {e}");
         let bind_addr : String = match env::var("BIND_ADDR") {
             Ok(v) => v,
             Err(e) => {
-                println!("Warning!! No 'BINDADDR' Environment Variable found. Defaulting to a placeholder: 'https://en.wikipedia.org/wiki/Leonhard_Euler'.\n
-run -- h to see more information on how to set an environment variable.\n
+                println!("Warning!! No 'BINDADDR' Environment Variable found. Defaulting to a placeholder: 'https://en.wikipedia.org/wiki/Leonhard_Euler'.
+run -- h to see more information on how to set an environment variable.
 Error: {e}");
                 "0.0.0.0:3000".to_string()
                 }
