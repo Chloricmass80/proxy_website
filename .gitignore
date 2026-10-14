@@ -1,3 +1,5 @@
 /target
+*.env
+!config/example.env
 .vscode
 visitors.db
