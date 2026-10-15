@@ -47,7 +47,9 @@ Environment Variable setup:
 Find environment variables in 'local.env' or '.env'.
 To see what environment variables exist, visit example.env.
 To set a bool environment variable to false, simply remove its decleration.
-To set a bool environment variable to true, add its decleration to equal any value.");
+To set a bool environment variable to true, add its decleration to equal any value.
+
+To reset the number of hits to 0, navigate to the executable's directory and remove the 'visitors.db' file.");
                 exit(0)
             }
 
