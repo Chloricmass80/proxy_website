@@ -87,7 +87,7 @@ Error: {e}");
         let bind_addr : String = match env::var("BIND_ADDR") {
             Ok(v) => v,
             Err(e) => {
-                println!("Warning!! No 'BIND_ADDR' Environment Variable found. Defaulting to a placeholder: 'https://en.wikipedia.org/wiki/Leonhard_Euler'.
+                println!("Warning!! No 'BIND_ADDR' Environment Variable found. Defaulting to a placeholder: '0.0.0.0:3000'.
 run -- h to see more information on how to set an environment variable.
 Error: {e}");
                 "0.0.0.0:3000".to_string()
